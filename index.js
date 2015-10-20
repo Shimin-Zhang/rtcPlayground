@@ -1,8 +1,13 @@
 var videoStream;
 var recorder;
 var isRecording = false;
-var mediaSource = new MediaSource();
-var sourceBuffer = mediaSource.addSourceBuffer('video/webm; codecs="vorbis,vp8"');
+var chunkArray = [];
+var blobDataArray = [];
+var blobsArray = [];
+var videoNum = 1;
+var blobNum = 1;
+var binaryNum = 1;
+// A quick demo to see how to best store video data from mediarecorder API as chunks to be transported and played back later.
 
 navigator.mozGetUserMedia({
     audio: true,
@@ -15,15 +20,56 @@ navigator.mozGetUserMedia({
 });
 
 var videoDataHandler = function (event) {
+    dataURLHandler(event);
+    BlobHandler(event);
+    binaryBlobHandler(event);
+};
+
+// Concat and play videos as base 64 DataURL
+dataURLHandler = function (event) {
     var reader = new FileReader();
-    var blob = event.data;
-    reader.readAsArrayBuffer(blob);
-    document.getElementById('recorded-video').setAttribute('src', window.URL.createObjectURL(blob));
+    reader.readAsDataURL(event.data);
     reader.onloadend = function (event) {
-        sourceBuffer.appendBuffer(fileReader.result);
-        //document.getElementById('recorded-video').setAttribute('src', event.target.result);
+        document.getElementById('recorded-video-' + videoNum).setAttribute('src', reader.result);
+        chunkArray.push(reader.result);
+        if (videoNum === 2) {
+            var one = chunkArray[0];
+            var two = chunkArray[1].split(',').pop();
+            document.getElementById('recorded-video-combined').setAttribute('src', one + two);
+        }
+        videoNum++;
     };
 };
+
+// Concat and play videos as Blobs
+BlobHandler = function (event) {
+    var blob = event.data;
+    blobsArray.push(blob);
+    document.getElementById('blob-video-' + blobNum).setAttribute('src', window.URL.createObjectURL(blob));
+    if (blobNum === 2) {
+        var combinedBlob = new Blob(blobsArray, { type: 'video/webm'});
+        document.getElementById('blob-video-combined').setAttribute('src', window.URL.createObjectURL(combinedBlob));
+    }
+    blobNum++;
+};
+
+
+// Store Blob as strings to be revived as Blobs later
+binaryBlobHandler = function (event) {
+    var reader = new FileReader();
+    reader.readAsBinaryString(event.data);
+    reader.onloadend = function (event) {
+        blobDataArray.push(reader.result);
+        if (videoNum === 2) {
+            var blobOne = new Blob([blobDataArray[0]], { type: 'video/webm'});
+            var blobTwo = new Blob([blobDataArray[1]], { type: 'video/webm'});
+            var blobCombined = new Blob([blobOne, blobTwo], {type: 'video/webm'})
+            document.getElementById('revived-blob-video-combined').setAttribute('src', window.URL.createObjectURL(blobCombined));
+        }
+        binaryNum++;
+    };
+};
+
 
 var createMediaPlayer = function () {
     recorder = new MediaRecorder(videoStream, {
@@ -32,21 +78,16 @@ var createMediaPlayer = function () {
     recorder.ondataavailable = videoDataHandler;
 };
 
+
 var recordButton = document.getElementById('record');
 recordButton.addEventListener('click', function (e) {
     isRecording = true;
     createMediaPlayer();
-    recorder.start();
-    var recordTimeout = function () {
-        window.setTimeout(function () {
-            recorder.requestData();
-            if (isRecording) {
-                recordTimeout();
-            }
-        }, 1000);
-    };
-    recordTimeout();
+    //Per https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder/ondataavailable
+    // should produce n millisecond long video blob
+    recorder.start(3000);
 });
+
 var stepButton = document.getElementById('stop');
 stepButton.addEventListener('click', function (e) {
     isRecording = false;
