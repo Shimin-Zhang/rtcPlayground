@@ -1,0 +1,16 @@
+{
+  "name": "RTCPlayground",
+  "version": "0.0.1",
+  "description": "A WebRTC Experiment",
+  "main": "index.html",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "dependencies": {
+    "express": "4.x",
+    "express-ws": "0.2.6",
+    "node-uuid": "1.4.3"
+  }
+}

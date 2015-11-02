@@ -26,6 +26,7 @@ var videoDataHandler = function (event) {
 };
 
 // Concat and play videos as base 64 DataURL
+// this does not work
 dataURLHandler = function (event) {
     var reader = new FileReader();
     reader.readAsDataURL(event.data);
@@ -42,6 +43,7 @@ dataURLHandler = function (event) {
 };
 
 // Concat and play videos as Blobs
+// this works
 BlobHandler = function (event) {
     var blob = event.data;
     blobsArray.push(blob);
@@ -55,14 +57,16 @@ BlobHandler = function (event) {
 
 
 // Store Blob as strings to be revived as Blobs later
+// this does not work
 binaryBlobHandler = function (event) {
     var reader = new FileReader();
+    var buffer = new ArrayBuffer(event.data.getSize);
     reader.readAsBinaryString(event.data);
     reader.onloadend = function (event) {
         blobDataArray.push(reader.result);
         if (videoNum === 2) {
-            var blobOne = new Blob([blobDataArray[0]], { type: 'video/webm'});
-            var blobTwo = new Blob([blobDataArray[1]], { type: 'video/webm'});
+            var blobOne = new Blob(blobDataArray[0], { type: 'video/webm'});
+            var blobTwo = new Blob([blobDataArray[1], { type: 'video/webm'});
             var blobCombined = new Blob([blobOne, blobTwo], {type: 'video/webm'})
             document.getElementById('revived-blob-video-combined').setAttribute('src', window.URL.createObjectURL(blobCombined));
         }
