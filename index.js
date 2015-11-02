@@ -67,7 +67,7 @@ binaryBlobHandler = function (event) {
         if (videoNum === 2) {
             var blobOne = new Blob(blobDataArray[0], { type: 'video/webm'});
             var blobTwo = new Blob([blobDataArray[1], { type: 'video/webm'});
-            var blobCombined = new Blob([blobOne, blobTwo], {type: 'video/webm'})
+            var blobCombined = new Blob([blobOne, blobTwo], {type: 'video/webm'});
             document.getElementById('revived-blob-video-combined').setAttribute('src', window.URL.createObjectURL(blobCombined));
         }
         binaryNum++;
