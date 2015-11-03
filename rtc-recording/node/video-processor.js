@@ -20,7 +20,7 @@ function writeOrAppendData(data, fileName, fileType, videoCounter, ws) {
     }
 }
 
-function fixWebmAudio(fileName) {
+function fixWebmAudio(fileName, callback) {
     var file = filePath + fileName + videoFileExtension;
     var movFile = filePath + fileName + '.mov';
     var ffmpegcommand = 'ffmpeg -i ' + file + ' -c:v prores -c:a pcm_s16le ' + movFile;
@@ -34,11 +34,25 @@ function fixWebmAudio(fileName) {
                 if (error) {
                     console.log(error);
                 } else {
+                    callback();
                     console.log('compile finished');
                 }
             });
         }
     });
+};
+
+function concatVideoes(fileNames) {
+    console.log('trying to concat videoes');
+    var ffmpegcommand = 'ffmpeg -i ' + filePath + fileNames[0] + '-good-audio' + videoFileExtension +' -i ' + filePath + fileNames[1] + '-good-audio' + videoFileExtension + ' -filter_complex "[0:v]scale=iw/2:ih/2,pad=2*iw:ih[left];[1:v]scale=iw/2:ih/2[right];[left][right]overlay=w[out];[0:a][1:a]amerge=inputs=2[a]" -map "[out]" -map "[a]" ' + filePath + 'test-concat' + videoFileExtension;
+    exec(ffmpegcommand, function (error, stdout, stderr) {
+        if (error) {
+            console.log(error);
+        } else {
+            console.log('concat finished');
+        }
+    });
+
 };
 
 module.exports = function (app) {
@@ -66,9 +80,19 @@ module.exports = function (app) {
     };
 
     function compileConferenceVideos(id) {
+        var counter = 0;
+        var fileNames = [];
+        function callback() {
+            counter += 1;
+            console.log('compile conferece counter ' + counter);
+            if (counter === 2) {
+                concatVideoes(fileNames);
+            }
+        }
         conferences[id].forEach(function (file) {
             var fileName = Object.keys(file)[0];
-            fixWebmAudio(fileName);
+            fileNames.push(fileName);
+            fixWebmAudio(fileName, callback);
         });
     }
 
