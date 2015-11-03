@@ -22,10 +22,10 @@ module.exports = function (app) {
         var fileName = uuid.v1();
         console.log('new connection established');
         ws.on('message', function(data) {
-        console.log(data);
-        if (data instanceof Buffer)
-            console.log('got binary data');
-            writeOrAppendData(data, fileName, ws)
+            if (data instanceof Buffer) {
+                console.log('got binary data');
+                writeOrAppendData(data, fileName, ws);
+            }
         });
     });
 };
