@@ -81,11 +81,16 @@
         } else if (message.type === 'start-recording') {
             console.log('starting to record');
             recorder.start(3000);
+        } else if (message.type === 'stop-recording') {
+            console.log('stop recording');
+            recorder.stop();
         } else if (message.part === videoCounter && recorder.state === 'inactive') {
+            console.log('sending over complete video message')
             connection.send(JSON.stringify({
                 completedVideo: message.fileName,
                 id: CONFERENCE_ID
             }));
+        }
     };
 
     function createPeerConnection() {
@@ -193,7 +198,7 @@
 
     var stopButton = document.getElementById('stop');
     stopButton.addEventListener('click', function (e) {
-        recorder.stop();
+        connection.send(JSON.stringify({ type: 'stop-recording' }));
     });
 
     var rtcButton = document.getElementById('webrtc');

@@ -20,17 +20,16 @@ function writeOrAppendData(data, fileName, fileType, videoCounter, ws) {
     }
 }
 
-function writeOrAppendData(fileName) {
+function fixWebmAudio(fileName) {
     var file = filePath + fileName + videoFileExtension;
     var movFile = filePath + fileName + '.mov';
-    var ffmpegcommand = 'ffmpeg -i' + file + '-c:v prores -c:a pcm_s16le ' + movFile;
+    var ffmpegcommand = 'ffmpeg -i ' + file + ' -c:v prores -c:a pcm_s16le ' + movFile;
     exec(ffmpegcommand, function (error, stdout, stderr) {
         if (error) {
             console.log(error);
         } else {
-            uploadToYoutube(completedFileName, ws);
             var fileWithAudio = filePath + fileName + '-good-audio'+ videoFileExtension;
-            var covnertBackCommand = 'ffmpeg -i' + movFile + fileWithAudio;
+            var covnertBackCommand = 'ffmpeg -i ' + movFile + ' ' +  fileWithAudio;
             exec(covnertBackCommand, function (error, stdout, stderr) {
                 if (error) {
                     console.log(error);
@@ -56,9 +55,9 @@ module.exports = function (app) {
     };
 
     function allVideosRecorded(id) {
-        allRecorded = true;
+        var allRecorded = true;
         conferences[id].forEach(function (file) {
-            fileName = Object.keys(file)[0];
+            var fileName = Object.keys(file)[0];
             if (file[fileName] === false) {
                 allRecorded = false;
             }
@@ -68,7 +67,7 @@ module.exports = function (app) {
 
     function compileConferenceVideos(id) {
         conferences[id].forEach(function (file) {
-            fileName = Object.keys(file)[0];
+            var fileName = Object.keys(file)[0];
             fixWebmAudio(fileName);
         });
     }
@@ -85,28 +84,37 @@ module.exports = function (app) {
                 videoCounter++;
                 console.log(fileType);
                 writeOrAppendData(data, fileName, fileType, videoCounter, ws)
-            } else if (JSON.parse(data).id && !JSON.parse(data).completedVideo) {
-                var conferenceID = JSON.parse(data).id;
-                var conferencePair = conferences[conferenceID];
-                console.log(conferencePair);
-                if (!conferencePair) {
-                    conferences[conferenceID] = [{ fileName: false }];
-                } else {
-                    conferencePair.push({ fileName: false });
-                }
-            } else if (JSON.parse(data).id && JSON.parse(data).completedVideo) {
+            } else  {
                 var data = JSON.parse(data);
-                conferencePair(data.id).forEach(function (participant) {
-                    if (participant[completedVideo] === false) {
-                        participant[completedVideo] = true;
+                console.log(data);
+                if (data.id && !data.completedVideo) {
+                    var conferenceID = data.id;
+                    var conferencePair = conferences[conferenceID];
+                    console.log(conferencePair);
+                    if (!conferencePair) {
+                        var obj = {};
+                        obj[fileName] = false;
+                        conferences[conferenceID] = [obj];
+                    } else {
+                        var obj = {};
+                        obj[fileName] = false;
+                        conferencePair.push(obj);
                     }
-                });
-                if (allVideosRecorded(data.id)) {
-                    compileConferenceVideos(data.id);
+                } else if (data.id && data.completedVideo) {
+                    conferences[data.id].forEach(function (participant) {
+                        if (participant[fileName] === false) {
+                            participant[fileName] = true;
+                        }
+                    });
+                    console.log(conferences);
+                    if (allVideosRecorded(data.id)) {
+                        console.log('trying to compile video')
+                        compileConferenceVideos(data.id);
+                    }
+                } else {
+                    console.log(data);
+                    broadcast(JSON.stringify(data));
                 }
-            } else {
-                console.log(JSON.parse(data));
-                broadcast(data);
             }
         });
     });
