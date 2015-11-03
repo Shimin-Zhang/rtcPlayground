@@ -1,12 +1,21 @@
 
 (function () {
     var selfCandidates = [];
+    var videoCounter = 0;
+    var videoProcessed;
+    var audioData;
+    var stream;
+    var connection;
+    var recorder;
+    var audioRecorder;
+    var offerCreated;
+    var pc;
     // null -> null
     function getVideoStream() {
-        var config = { video: true };
-        navigator.mozGetUserMedia(config, function (stream) {
-            window.stream = stream;
-            document.getElementById('video-one').setAttribute('src', window.URL.createObjectURL(stream));
+        var config = { video: true, audio: true };
+        navigator.mozGetUserMedia(config, function (s) {
+            stream = s;
+            document.getElementById('video-one').setAttribute('src', window.URL.createObjectURL(s));
             getRecorder();
             createPeerConnection();
         }, function () {
@@ -16,25 +25,43 @@
 
     function getRecorder() {
         var options = { mimeType: 'video/webm' };
-        window.recorder = new MediaRecorder(window.stream, options);
-        window.recorder.ondataavailable = videoDataHandler;
+        var audioOptions = { mimeType: 'audio/ogg' };
+        recorder = new MediaRecorder(stream, options);
+        audioRecorder = new MediaRecorder(stream, audioOptions);
+        recorder.ondataavailable = videoDataHandler;
+        audioRecorder.ondataavailable = audioDataHandler;
     };
 
     function videoDataHandler(event) {
         var reader = new FileReader();
         reader.readAsArrayBuffer(event.data);
+        videoCounter++;
         reader.onloadend = function (event) {
             console.log(reader.result);
-            window.connection.send(reader.result);
+            connection.send(reader.result);
         };
     };
 
-    // nul -> websoketConnection
+    function audioDataHandler(event) {
+        var reader = new FileReader();
+        reader.readAsArrayBuffer(event.data);
+        reader.onloadend = function (event) {
+            console.log('audio file received');
+            console.log(reader.result);
+            console.log(videoProcessed);
+            if (videoProcessed) {
+                recordAudioData(reader.result);
+            } else {
+                audioData = reader.result;
+            }
+        };
+    };
+
     function getWebSocket() {
         var websocketEndpoint = 'ws://localhost:9000';
-        window.connection = new WebSocket(websocketEndpoint);
-        window.connection.binaryType = 'arraybuffer';
-        window.connection.onmessage = function (message) {
+        connection = new WebSocket(websocketEndpoint);
+        connection.binaryType = 'arraybuffer';
+        connection.onmessage = function (message) {
             handleSocketMessage(message);
         }
     };
@@ -42,16 +69,16 @@
     function handleSocketMessage(message) {
         var message = JSON.parse(message.data);
         console.log(message);
-        if (!window.offerCreated && message.type === 'offer') {
+        if (!offerCreated && message.type === 'offer') {
             console.log('got offer');
             var sessionDescription = new window.mozRTCSessionDescription(message.sessionDescription);
-            window.pc.setRemoteDescription(sessionDescription, createRTCAnswer, function (error) {
+            pc.setRemoteDescription(sessionDescription, createRTCAnswer, function (error) {
                 console.log('cannot set remote description');
             });
-        } else if (window.offerCreated && message.type === 'answer') {
+        } else if (offerCreated && message.type === 'answer') {
             console.log('got answer');
             var sessionDescription = new window.mozRTCSessionDescription(message.sessionDescription);
-            window.pc.setRemoteDescription(sessionDescription, function () {
+            pc.setRemoteDescription(sessionDescription, function () {
                 console.log('created remote description');
             }, function (error) {
                 console.log(error);
@@ -63,10 +90,20 @@
                   sdpMLineIndex: message.label,
                   candidate: message.candidate
                 });
-                window.pc.addIceCandidate(candidate);
+                pc.addIceCandidate(candidate);
+            }
+        } else if (message.part === videoCounter && recorder.state === 'inactive') {
+            videoProcessed = true;
+            if (audioData) {
+                recordAudioData(audioData);
             }
         }
-    }
+    };
+
+    function recordAudioData(data) {
+        connection.send(JSON.stringify({ recordAudio: true }));
+        connection.send(data);
+    };
 
     function createPeerConnection() {
         var rtcConfig = { iceServers: [
@@ -82,17 +119,17 @@
                 username: '1_36919724-4a87-11e5-8477-887f02eb962a'
             }
         ] };
-        window.pc = new window.mozRTCPeerConnection(rtcConfig);
-        window.pc.addStream(window.stream);
-        window.pc.onicecandidate = handleIceCandidate;
-        window.pc.onaddstream = handleRemoteStreamAdded;
-        window.pc.onremovestream = handleRemoteStreamRemoved;
+        pc = new window.mozRTCPeerConnection(rtcConfig);
+        pc.addStream(stream);
+        pc.onicecandidate = handleIceCandidate;
+        pc.onaddstream = handleRemoteStreamAdded;
+        pc.onremovestream = handleRemoteStreamRemoved;
     };
 
     function handleIceCandidate(event) {
         console.log('handleIceCandidate event: ', event);
         if (event.candidate) {
-              window.connection.send(JSON.stringify({
+              connection.send(JSON.stringify({
                   type: 'candidate',
                   label: event.candidate.sdpMLineIndex,
                   id: event.candidate.sdpMid,
@@ -119,12 +156,12 @@
             'OfferToReceiveAudio':true,
             'OfferToReceiveVideo':true
         };
-        window.pc.createAnswer(
+        pc.createAnswer(
             function (sessionDescription) {
-                window.pc.setLocalDescription(sessionDescription,
+                pc.setLocalDescription(sessionDescription,
                     function () {
                         var message = { sessionDescription: sessionDescription, type: 'answer' }
-                        window.connection.send(JSON.stringify(message));
+                        connection.send(JSON.stringify(message));
                     },
                     function (error) {
                         console.log('cannot set local description');
@@ -144,14 +181,13 @@
             'OfferToReceiveVideo':true
         };
         console.log('creating offer');
-        console.log(window.pc);
-        window.pc.createOffer(
+        pc.createOffer(
             function (sessionDescription) {
                 console.log(sessionDescription);
-                window.pc.setLocalDescription(sessionDescription, function () {
+                pc.setLocalDescription(sessionDescription, function () {
                     var message = { sessionDescription: sessionDescription, type: 'offer' }
-                    window.connection.send(JSON.stringify(message));
-                    window.offerCreated = true;
+                    connection.send(JSON.stringify(message));
+                    offerCreated = true;
                 }, function (error) {
                     console.log('cannot set local description');
                     return;
@@ -168,12 +204,14 @@
 
     var startButton = document.getElementById('record');
     startButton.addEventListener('click', function (e) {
-        window.recorder.start(3000);
+        audioRecorder.start();
+        recorder.start(3000);
     });
 
     var stopButton = document.getElementById('stop');
     stopButton.addEventListener('click', function (e) {
-        window.recorder.stop();
+        audioRecorder.stop();
+        recorder.stop();
     });
 
     var rtcButton = document.getElementById('webrtc');

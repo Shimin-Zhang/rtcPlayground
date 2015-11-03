@@ -1,6 +1,6 @@
 (function () {
     function getVideoStream() {
-        var config = { video: true };
+        var config = { video: true, audio: true };
         var userstream;
         navigator.mozGetUserMedia(config, function (stream) {
             window.stream = stream;
@@ -12,7 +12,7 @@
     };
 
     function getRecorder() {
-        var options = { mimeType: 'video/webm' };
+        var options = { mimeType: 'video/webm', audioBitsPerSecond: 128000 };
         window.recorder = new MediaRecorder(window.stream, options);
         window.recorder.ondataavailable = videoDataHandler;
     };
