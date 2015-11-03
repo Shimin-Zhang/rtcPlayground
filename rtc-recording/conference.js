@@ -2,14 +2,12 @@
 (function () {
     var selfCandidates = [];
     var videoCounter = 0;
-    var videoProcessed;
-    var audioData;
     var stream;
     var connection;
     var recorder;
-    var audioRecorder;
     var offerCreated;
     var pc;
+    var CONFERENCE_ID = 'conference-one';
     // null -> null
     function getVideoStream() {
         var config = { video: true, audio: true };
@@ -25,11 +23,8 @@
 
     function getRecorder() {
         var options = { mimeType: 'video/webm' };
-        var audioOptions = { mimeType: 'audio/ogg' };
         recorder = new MediaRecorder(stream, options);
-        audioRecorder = new MediaRecorder(stream, audioOptions);
         recorder.ondataavailable = videoDataHandler;
-        audioRecorder.ondataavailable = audioDataHandler;
     };
 
     function videoDataHandler(event) {
@@ -42,21 +37,6 @@
         };
     };
 
-    function audioDataHandler(event) {
-        var reader = new FileReader();
-        reader.readAsArrayBuffer(event.data);
-        reader.onloadend = function (event) {
-            console.log('audio file received');
-            console.log(reader.result);
-            console.log(videoProcessed);
-            if (videoProcessed) {
-                recordAudioData(reader.result);
-            } else {
-                audioData = reader.result;
-            }
-        };
-    };
-
     function getWebSocket() {
         var websocketEndpoint = 'ws://localhost:9000';
         connection = new WebSocket(websocketEndpoint);
@@ -65,6 +45,12 @@
             handleSocketMessage(message);
         }
     };
+
+    function setConferenceID(id) {
+        connection.send(JSON.stringify({
+            id: id
+        }));
+    }
 
     function handleSocketMessage(message) {
         var message = JSON.parse(message.data);
@@ -92,17 +78,14 @@
                 });
                 pc.addIceCandidate(candidate);
             }
+        } else if (message.type === 'start-recording') {
+            console.log('starting to record');
+            recorder.start(3000);
         } else if (message.part === videoCounter && recorder.state === 'inactive') {
-            videoProcessed = true;
-            if (audioData) {
-                recordAudioData(audioData);
-            }
-        }
-    };
-
-    function recordAudioData(data) {
-        connection.send(JSON.stringify({ recordAudio: true }));
-        connection.send(data);
+            connection.send(JSON.stringify({
+                completedVideo: message.fileName,
+                id: CONFERENCE_ID
+            }));
     };
 
     function createPeerConnection() {
@@ -145,6 +128,7 @@
         document.getElementById('video-two').setAttribute('src',
             window.URL.createObjectURL(event.stream));
         console.log('handleRemoteStream');
+        setConferenceID(CONFERENCE_ID);
     };
 
     function handleRemoteStreamRemoved() {
@@ -204,13 +188,11 @@
 
     var startButton = document.getElementById('record');
     startButton.addEventListener('click', function (e) {
-        audioRecorder.start();
-        recorder.start(3000);
+        connection.send(JSON.stringify({ type: 'start-recording' }));
     });
 
     var stopButton = document.getElementById('stop');
     stopButton.addEventListener('click', function (e) {
-        audioRecorder.stop();
         recorder.stop();
     });
 
