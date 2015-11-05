@@ -4,7 +4,6 @@ var fs = require('fs');
 var exec = require('child_process').exec;
 var uuid = require('node-uuid');
 var videoFileExtension = '.webm';
-var audioFileExtension = '.wav';
 var blobs = [];
 var filePath = './uploads/';
 
@@ -23,8 +22,8 @@ function writeOrAppendData(data, fileName, fileType, videoCounter, ws) {
 
 function fixWebmAudio(fileName, callback) {
     var file = filePath + fileName + videoFileExtension;
-    var wavFile = filePath + fileName + audioFileExtension;
-    var ffmpegcommand = 'ffmpeg -i ' + file + ' -c:a pcm_s16le ' + wavFile;
+    var movFile = filePath + fileName + '.mov';
+    var ffmpegcommand = 'ffmpeg -i ' + file + ' -c:v prores -c:a pcm_s16le ' + movFile;
     exec(ffmpegcommand, { maxBuffer: 20000 * 1024 }, function (error, stdout, stderr) {
         if (error) {
             console.log(error);
@@ -36,12 +35,7 @@ function fixWebmAudio(fileName, callback) {
 
 function concatVideoes(fileNames) {
     console.log('trying to concat videoes');
-    var ffmpegcommand = 'ffmpeg -i '
-        + filePath + fileNames[0] + videoFileExtension
-        + ' -i ' + filePath + fileNames[1] + videoFileExtension +
-        + ' -i ' + filePath + fileNames[0] + audioFileExtension +
-        + ' -i ' + filePath + fileNames[1] + audioFileExtension +
-        ' -filter_complex "[0:v]scale=iw/2:ih/2,pad=2*iw:ih[left];[1:v]scale=iw/2:ih/2[right];[left][right]overlay=w[out];[2:a][3:a]amerge=inputs=2[a]" -map "[out]" -map "[a]" ' + filePath + 'concated-videos' + videoFileExtension;
+    var ffmpegcommand = 'ffmpeg -i ' + filePath + fileNames[0] + '.mov' +' -i ' + filePath + fileNames[1] + '.mov' + ' -filter_complex "[0:v]scale=iw/2:ih/2,pad=2*iw:ih[left];[1:v]scale=iw/2:ih/2[right];[left][right]overlay=w[out];[0:a][1:a]amerge=inputs=2[a]" -map "[out]" -map "[a]" ' + filePath + 'concated-videos' + videoFileExtension;
     exec(ffmpegcommand, { maxBuffer: 20000 * 1024 }, function (error, stdout, stderr) {
         if (error) {
             console.log(error);
@@ -49,6 +43,7 @@ function concatVideoes(fileNames) {
             console.log('concat finished');
         }
     });
+
 };
 
 module.exports = function (app) {
