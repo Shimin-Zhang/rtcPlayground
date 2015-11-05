@@ -22,8 +22,16 @@ function videoDataHandler (event) {
 // this works
 function BlobHandler (event) {
     var blob = event.data;
-    document.getElementById('blob-video').setAttribute('src', window.URL.createObjectURL(blob));
+    blobsArray.push(blob);
+    if (isRecording === false) {
+        showRecordedVideo();
+    }
 };
+
+function showRecordedVideo() {
+    var totalBlob = new Blob(blobsArray, { type: 'video/webm' });
+    document.getElementById('blob-video').setAttribute('src', window.URL.createObjectURL(totalBlob));
+}
 
 var createMediaPlayer = function () {
     window.recorder = new MediaRecorder(videoStream, {
@@ -37,7 +45,7 @@ var recordButton = document.getElementById('record');
 recordButton.addEventListener('click', function (e) {
     isRecording = true;
     createMediaPlayer();
-    window.recorder.start();
+    window.recorder.start(3000);
 });
 
 var stepButton = document.getElementById('stop');
