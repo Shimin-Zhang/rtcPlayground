@@ -27,5 +27,6 @@ module.exports = function (app) {
                 writeOrAppendData(data, fileName, ws);
             }
         });
+        ws.send(fileName);
     });
 };

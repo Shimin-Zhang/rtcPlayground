@@ -1,10 +1,15 @@
 (function () {
+    var recorder;
+    var mediaStream;
+    var fileName;
+    var connection;
+
     function getVideoStream() {
         var config = { video: true, audio: true };
         var userstream;
         navigator.mozGetUserMedia(config, function (stream) {
-            window.stream = stream;
-            document.getElementsByTagName('video')[0].setAttribute('src', window.URL.createObjectURL(stream));
+            mediaStream = stream;
+            document.getElementsByTagName('video')[0].setAttribute('src', window.URL.createObjectURL(mediaStream));
             getRecorder();
         }, function () {
             document.getElementById('errors').innerHTML = 'Cannot get stream!';
@@ -13,8 +18,8 @@
 
     function getRecorder() {
         var options = { mimeType: 'video/webm', audioBitsPerSecond: 128000 };
-        window.recorder = new MediaRecorder(window.stream, options);
-        window.recorder.ondataavailable = videoDataHandler;
+        recorder = new MediaRecorder(mediaStream, options);
+        recorder.ondataavailable = videoDataHandler;
     };
 
     function videoDataHandler(event) {
@@ -22,27 +27,35 @@
         reader.readAsArrayBuffer(event.data);
         reader.onloadend = function (event) {
             console.log(reader.result);
-            window.connection.send(reader.result);
+            connection.send(reader.result);
         };
     };
 
     function getWebSocket() {
         var websocketEndpoint = 'ws://localhost:7000';
-        window.connection = new WebSocket(websocketEndpoint);
-        window.connection.binaryType = 'arraybuffer';
-        window.connection.onmessage = function (message) {
-            window.fileName = message.data;
+        connection = new WebSocket(websocketEndpoint);
+        connection.binaryType = 'arraybuffer';
+        connection.onmessage = function (message) {
+            fileName = message.data;
         }
+    };
+
+    function updateVideoFile() {
+        var video = document.getElementById('recorded-video');
+        var fileLocation = 'http://localhost:7000/uploads/'
+            + fileName + '.webm';
+        video.setAttribute('src', fileLocation);
     };
 
     var startButton = document.getElementById('record');
     startButton.addEventListener('click', function (e) {
-        window.recorder.start(3000);
+        recorder.start(1000);
     });
 
     var stopButton = document.getElementById('stop');
     stopButton.addEventListener('click', function (e) {
-        window.recorder.stop();
+        recorder.stop();
+        updateVideoFile();
     });
 
     getVideoStream();
