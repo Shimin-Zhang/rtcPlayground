@@ -5,7 +5,7 @@ var path = require('path');
 var express = require('express');
 var expressWss = require('express-ws')(express());
 var appWs = expressWss.app;
-appWs.use('./../uploads',express.static('./uploads'));
+appWs.use('/uploads',express.static('./uploads'));
 
 require('./video-processor')(appWs);
 

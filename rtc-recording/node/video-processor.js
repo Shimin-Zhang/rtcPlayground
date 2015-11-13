@@ -53,7 +53,6 @@ module.exports = function (app) {
     function broadcast(data) {
         console.log('trying to broadcast data');
         console.log(data);
-        console.log(sockets.length);
         sockets.forEach(function (socket) {
             socket.send(data);
         });
@@ -97,7 +96,6 @@ module.exports = function (app) {
             if (data instanceof Buffer) {
                 console.log('got binary data');
                 videoCounter++;
-                console.log(fileType);
                 writeOrAppendData(data, fileName, fileType, videoCounter, ws)
             } else  {
                 var data = JSON.parse(data);
