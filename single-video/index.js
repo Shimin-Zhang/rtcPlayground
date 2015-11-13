@@ -4,15 +4,13 @@ var isRecording = false
 var blobsArray = [];
 // A quick demo to see how to best store video data from mediarecorder API as chunks to be transported and played back later.
 
-navigator.mozGetUserMedia({
+navigator.mediaDevices.getUserMedia({
     audio: true,
     video: true
-}, function (stream) {
+}).then(function (stream) {
     videoStream = stream;
     document.getElementById('video').setAttribute('src', window.URL.createObjectURL(stream));
-}, function (erro) {
-    console.log('cannot open stream');
-});
+})
 
 function videoDataHandler (event) {
     BlobHandler(event);
