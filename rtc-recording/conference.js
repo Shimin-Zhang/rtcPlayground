@@ -11,13 +11,12 @@
     // null -> null
     function getVideoStream() {
         var config = { video: true, audio: true };
-        navigator.mozGetUserMedia(config, function (s) {
+        navigator.mediaDevices.getUserMedia(config)
+        .then(function (s) {
             stream = s;
             document.getElementById('video-one').setAttribute('src', window.URL.createObjectURL(s));
             getRecorder();
             createPeerConnection();
-        }, function () {
-            document.getElementById('errors').innerHTML = 'Cannot get stream!';
         });
     };
 
@@ -96,17 +95,7 @@
     function createPeerConnection() {
         var rtcConfig = { iceServers: [
             { urls: ['stun:stun.l.google.com:19302'] },
-            {
-                credential: '369197e2-4a87-11e5-bcd9-6cbece04ef20',
-                urls: ['turn:turn01.uswest.xirsys.com:443?transport=udp'],
-                username: '1_36919724-4a87-11e5-8477-887f02eb962a'
-            },
-            {
-                credential: '369197e2-4a87-11e5-bcd9-6cbece04ef20',
-                urls: ['turn:turn01.uswest.xirsys.com:443?transport=tcp'],
-                username: '1_36919724-4a87-11e5-8477-887f02eb962a'
-            }
-        ] };
+        ]};
         pc = new window.mozRTCPeerConnection(rtcConfig);
         pc.addStream(stream);
         pc.onicecandidate = handleIceCandidate;

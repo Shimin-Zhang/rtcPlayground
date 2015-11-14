@@ -7,18 +7,13 @@ var blobsArray = [];
 navigator.mediaDevices.getUserMedia({
     audio: true,
     video: true
-}).then(function (stream) {
+    })
+    .then(function (stream) {
     videoStream = stream;
     document.getElementById('video').setAttribute('src', window.URL.createObjectURL(stream));
 })
 
 function videoDataHandler (event) {
-    BlobHandler(event);
-};
-
-// Concat and play videos as Blobs
-// this works
-function BlobHandler (event) {
     var blob = event.data;
     document.getElementById('blob-video').setAttribute('src', window.URL.createObjectURL(blob));
 };
@@ -29,7 +24,6 @@ var createMediaPlayer = function () {
     });
     window.recorder.ondataavailable = videoDataHandler;
 };
-
 
 var recordButton = document.getElementById('record');
 recordButton.addEventListener('click', function (e) {

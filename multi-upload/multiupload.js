@@ -7,13 +7,15 @@
     function getVideoStream() {
         var config = { video: true, audio: true };
         var userstream;
-        navigator.mozGetUserMedia(config, function (stream) {
+        navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: true
+        })
+        .then(function (stream) {
             mediaStream = stream;
             document.getElementsByTagName('video')[0].setAttribute('src', window.URL.createObjectURL(mediaStream));
             getRecorder();
-        }, function () {
-            document.getElementById('errors').innerHTML = 'Cannot get stream!';
-        });
+        })
     };
 
     function getRecorder() {
