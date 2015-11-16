@@ -158,7 +158,6 @@
             'OfferToReceiveAudio':true,
             'OfferToReceiveVideo':true
         };
-        console.log('creating offer');
         pc.createOffer(
             function (sessionDescription) {
                 console.log(sessionDescription);
