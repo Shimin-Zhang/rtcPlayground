@@ -28,7 +28,6 @@
         var reader = new FileReader();
         reader.readAsArrayBuffer(event.data);
         reader.onloadend = function (event) {
-            console.log(reader.result);
             connection.send(reader.result);
         };
     };

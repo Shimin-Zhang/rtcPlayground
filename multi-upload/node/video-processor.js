@@ -23,7 +23,6 @@ module.exports = function (app) {
         console.log('new connection established');
         ws.on('message', function(data) {
             if (data instanceof Buffer) {
-                console.log('got binary data');
                 writeOrAppendData(data, fileName, ws);
             }
         });
